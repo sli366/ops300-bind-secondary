@@ -43,7 +43,7 @@ pipeline {
                         set -eu
                         set +x
 
-                        AUTH_FILE=$(mktemp)
+                        AUTH_FILE=$(mktemp -u)
                         trap 'rm -f "$AUTH_FILE"' EXIT
 
                         printf '%s' "$REG_PASS" | podman login --authfile "$AUTH_FILE" --username "$REG_USER" --password-stdin "$REGISTRY"
