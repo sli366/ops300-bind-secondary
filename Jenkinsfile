@@ -20,6 +20,8 @@ pipeline {
 
         IMAGE = 'bind-secondary'
 
+        REGISTRY_AUTH_FILE = "${WORKSPACE}/.registry-auth.json"
+
     }
 
 
@@ -50,6 +52,8 @@ pipeline {
 
                     SHORT_SHA=$(git rev-parse --short=7 HEAD)
 
+
+
                     podman build \
 
                         -t ${REGISTRY}/${IMAGE}:${BUILD_NUMBER} \
@@ -70,14 +74,41 @@ pipeline {
 
             steps {
 
-                sh '''
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'registry-creds',
+                        usernameVariable: 'REG_USER',
+                        passwordVariable: 'REG_PASS'
+                    )
+                ]) {
+                    sh '''
+                        set +x
+                        printf '%s' "$REG_PASS" | podman login \
+                            --authfile "$REGISTRY_AUTH_FILE" \
+                            --username "$REG_USER" \
+                            --password-stdin \
+                            "$REGISTRY"
 
-                    SHORT_SHA=$(git rev-parse --short=7 HEAD)
+                        SHORT_SHA=$(git rev-parse --short=7 HEAD)
 
-                    podman push ${REGISTRY}/${IMAGE}:${BUILD_NUMBER}
-                    podman push ${REGISTRY}/${IMAGE}:${SHORT_SHA}
-                '''
+                        podman push \
+                            --authfile "$REGISTRY_AUTH_FILE" \
+                            ${REGISTRY}/${IMAGE}:${BUILD_NUMBER}
+
+                        podman push \
+                            --authfile "$REGISTRY_AUTH_FILE" \
+                            ${REGISTRY}/${IMAGE}:${SHORT_SHA}
+                       '''
+                }
             }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                rm -f "$REGISTRY_AUTH_FILE"
+            '''
         }
     }
 }
