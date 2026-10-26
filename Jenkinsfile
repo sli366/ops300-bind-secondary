@@ -48,23 +48,15 @@ pipeline {
 
                 sh '''
 
-                    podman build -t ${IMAGE}:${BUILD_NUMBER} .
+                    SHORT_SHA=$(git rev-parse --short=7 HEAD)
 
-                '''
+                    podman build \
 
-            }
+                        -t ${REGISTRY}/${IMAGE}:${BUILD_NUMBER} \
 
-        }
+                        -t ${REGISTRY}/${IMAGE}:${SHORT_SHA} \
 
-
-
-        stage('Tag Image') {
-
-            steps {
-
-                sh '''
-
-                    podman tag ${IMAGE}:${BUILD_NUMBER} ${REGISTRY}/${IMAGE}:${BUILD_NUMBER}
+                        .
 
                 '''
 
@@ -80,7 +72,10 @@ pipeline {
 
                 sh '''
 
+                    SHORT_SHA=$(git rev-parse --short=7 HEAD)
+
                     podman push ${REGISTRY}/${IMAGE}:${BUILD_NUMBER}
+                    podman push ${REGISTRY}/${IMAGE}:${SHORT_SHA}
                 '''
             }
         }
